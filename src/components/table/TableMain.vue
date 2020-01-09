@@ -1,8 +1,11 @@
 <template>
-  <table class="table-main">
+  <table class="table-main" v-if="!allDataHidden">
     <tr class="table-row">
       <td>
         Показатель
+      </td>
+      <td>
+        Разница %
       </td>
       <td
         v-for="date in allDates"
@@ -15,13 +18,23 @@
       class="table-row"
       v-for="item in data"
       :key="item.name"
+      v-show="item.show !== false"
     >
-      <td>
+      <td
+        class="table-row-title"
+        @click="rowClickHandler(item)"
+        :class="{'table-row-active': item.name === (activeRow && activeRow.name)}"
+      >
         {{ item.name }}
+      </td>
+      <td class="table-row">
+        {{ difference(item) }}
       </td>
       <table-item
         v-for="data in item.values"
-        :data="data"
+        :value="data.value"
+        :parent="item.name"
+        :id="data.id"
         :key="data.id"
       />
     </tr>
@@ -29,64 +42,65 @@
 </template>
 
 <script>
-import data from '../../../public/data.json'
-import randomValue from '../../mixins/randomValue'
-import sortObjectsArray from '../../mixins/sortObjectsArray'
 import TableItem from "./TableItem";
+import { mapGetters, mapMutations } from 'vuex'
 
 export default {
   name: "TableMain",
   components: {TableItem},
-  mixins: [randomValue, sortObjectsArray],
-  data() {
-    return {
-      data
-    }
-  },
-  watch: {
-    data: {
-      immediate: true,
-      handler() {
-        this.fillData();
-        this.sortData()
-      }
-    }
+  mounted() {
+    this.setDates();
+    this.fillData();
+    this.sortData();
   },
   computed: {
-    allDates() {
-      const dates = new Set();
-      this.data.forEach(item => {
-        item.values.forEach(value => dates.add(value.date))
-      });
-      return dates
-    },
+    ...mapGetters(['data', 'allDates', 'activeRow']),
+    allDataHidden() {
+      return this.data.every(item => item.show === false)
+    }
   },
   methods: {
-    fillData() {
-      this.allDates.forEach(date => {
-        this.data.forEach(item => {
-          if (!item.values.find(value => value.date === date)) {
-            // eslint-disable-next-line no-console
-            item.values.push({
-              id: this.randomValue(),
-              value: null,
-              date: date
-            })
-          }
-        })
-      })
+    ...mapMutations(['setDates', 'fillData', 'sortData', 'setActiveRow']),
+    rowClickHandler(row) {
+      this.setActiveRow(row)
     },
-    sortData() {
-      this.data.forEach(item => {
-        this.sortObjectsArray(item.values, 'date')
-      })
+    difference(item) {
+      const values = item.values;
+      if (values.length > 1 && values[1].value !== 0) {
+        let value = null,
+            sign = null;
+        if (values[1].value > values[0].value) {
+          value = values[0].value / values[1].value;
+          sign = -1
+        } else {
+          value = values[1].value / values[0].value;
+          sign = 1;
+        }
+        return  ((1 - value) * 100).toFixed(1) * sign
+      }
     }
   }
 }
 </script>
 
-<style scoped>
-  .table-row td {
-    border: 1px solid #ddd;
+<style scoped lang="scss">
+  .table-row {
+    text-align: left;
+    &-title {
+      cursor: pointer;
+      transition: .3s;
+      &:hover {
+        background: #97c7eb;
+        color: #ffffff;
+      }
+    }
+    &-active {
+      background: #97c7eb;
+      color: #ffffff;
+    }
+    & td {
+      padding: 3px 10px;
+      border: 1px solid #ddd;
+    }
   }
 </style>

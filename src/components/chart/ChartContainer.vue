@@ -1,46 +1,74 @@
 <template>
-  <div class="chart-container">
+  <div v-if="activeRow" class="chart-container">
     <line-chart
       v-if="loaded"
-      :chartdata="chartdata"
+      :chart-data="chartData"
       :options="options"
     />
   </div>
 </template>
 
 <script>
-  import LineChart from './Chart.vue'
+import LineChart from './Chart.vue';
+import { mapGetters } from 'vuex';
 
-  export default {
-    name: 'LineChartContainer',
-    components: { LineChart },
-    data() {
-      return {
-        loaded: false,
-        chartdata: null,
-        options: {
-          labels: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
-          series: [
-            [5, 5, 10, 8, 7, 5, 4, null, null, null, 10, 10, 7, 8, 6, 9],
-            [10, 15, null, 12, null, 10, 12, 15, null, null, 12, null, 14, null, null, null],
-            [null, null, null, null, 3, 4, 1, 3, 4,  6,  7,  9, 5, null, null, null],
-            [{x:3, y: 3},{x: 4, y: 3}, {x: 5, y: undefined}, {x: 6, y: 4}, {x: 7, y: null}, {x: 8, y: 4}, {x: 9, y: 4}]
-          ]
-        }
+export default {
+  name: 'LineChartContainer',
+  components: { LineChart },
+  data() {
+    return {
+      loaded: false,
+      chartData: null,
+      options: {
+        spanGaps: true,
+      },
+    }
+  },
+  watch: {
+    data: {
+      deep: true,
+      handler() {
+        this.handleRerenderChart();
       }
     },
-    async mounted() {
-      this.loaded = false
-      try {
-        const { userlist } = await fetch('/api/userlist')
-        this.chartdata = userlist
-        this.loaded = true
-      } catch (e) {
-        // eslint-disable-next-line no-console
-        console.error(e)
-      }
+    activeRow() {
+      this.handleRerenderChart();
     }
+  },
+  async mounted() {
+    this.loaded = false
+    try {
+      this.loaded = true
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.error(e)
+    }
+  },
+  computed: {
+    ...mapGetters(['data', 'allDates', 'activeRow'])
+  },
+  methods: {
+    handleRerenderChart() {
+      if (!this.activeRow) {
+        return
+      }
+      this.chartData = {
+        labels: [...this.allDates].map(date => this.$moment(date).format("DD/MM")),
+        datasets: [
+          {
+            borderWidth: 0,
+            label: this.activeRow.name,
+            backgroundColor: 'transparent',
+            data: this.getValues(this.activeRow)
+          },
+        ]
+      }
+    },
+    getValues(item) {
+      return item.values.map(item => item.value)
+    },
   }
+}
 </script>
 
 <style scoped>

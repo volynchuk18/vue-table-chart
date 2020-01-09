@@ -1,22 +1,38 @@
 <template>
   <td class="table-item">
-    <input :value="this.data.value">
+    <input v-model="computedValue">
   </td>
 </template>
 
 <script>
+import { mapMutations } from 'vuex';
+
 export default {
   name: "TableItem",
-  props: {
-    data: {
-      type: Object,
-      required: true
+  props: ['value', 'parent', 'id'],
+  methods: {
+    ...mapMutations(['setNewValue'])
+  },
+  watch: {
+    computedValue(to, from) {
+      if (isNaN(to)) {
+        this.computedValue = from
+      }
     }
   },
   computed: {
-    formattedDate() {
-      return this.$moment(this.data.date).format("DD/MM/YYYY")
-    }
+    computedValue: {
+      get() {
+        return this.value
+      },
+      set(value) {
+        this.setNewValue({
+          parent: this.parent,
+          id: this.id,
+          value: value
+        })
+      }
+    },
   }
 }
 </script>
@@ -30,6 +46,7 @@ export default {
     }
   }
   .table-item input {
+    width: 60px;
     outline: none;
     border: none;
   }
